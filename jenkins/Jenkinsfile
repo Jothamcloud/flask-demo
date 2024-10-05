@@ -28,8 +28,21 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    
-                    sh 'docker run --rm flask-app pytest src'
+                      // List contents of the container
+                    sh 'echo "Contents of /app directory:"'
+                    sh 'docker run --rm flask-app ls -la /app'
+            
+                         // List installed Python packages
+                    sh 'echo "Installed Python packages:"'
+                    sh 'docker run --rm flask-app pip list'
+            
+                        // Try to locate test files
+                    sh 'echo "Searching for test files:"'
+                    sh 'docker run --rm flask-app find /app -name "test_*.py"'
+            
+                        // Run pytest with verbose output
+                    sh 'echo "Running pytest:"'
+                    sh 'docker run --rm flask-app pytest -v /app'
                 }
             }
         }
