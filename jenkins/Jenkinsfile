@@ -1,0 +1,83 @@
+pipeline {
+    agent any
+
+    environment {
+        // JFrog Artifactory details
+        ARTIFACTORY_URL = 'http://your-artifactory-url'
+        ARTIFACTORY_REPO = 'your-repo-name'
+        DOCKER_REGISTRY = 'your-artifactory-docker-repo'
+
+        // Docker Hub credentials
+        ARTIFACTORY_USER = credentials('artifactory-username')
+        ARTIFACTORY_PASSWORD = credentials('artifactory-password')
+
+        // Python Environment
+        PYTHON_VERSION = '3.9'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/your-repo.git', branch: 'main'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh 'docker build -t flask-app .'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    // Run your Flask tests here (update based on your test setup)
+                    sh 'docker run flask-app pytest tests/'
+                }
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                sh '''
+                curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+                export PATH=$PATH:$(pwd)/bin
+                trivy image --exit-code 1 --severity HIGH,CRITICAL flask-app
+                '''
+            }
+            post {
+                failure {
+                    echo 'Security vulnerabilities found!'
+                }
+            }
+        }
+
+        stage('JFrog CLI Setup') {
+            steps {
+                sh '''
+                curl -fL https://getcli.jfrog.io | sh
+                chmod +x jfrog
+                '''
+            }
+        }
+
+        stage('Push to Artifactory') {
+            steps {
+                script {
+                    sh '''
+                    ./jfrog rt docker-push flask-app $DOCKER_REGISTRY --build-name=my-build --build-number=$BUILD_NUMBER
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+            cleanWs()
+        }
+    }
+}
