@@ -20,8 +20,11 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t flask-app -f src/Dockerfile --build-arg REQUIREMENTS_PATH=./requirements.txt .'
-                }
+                    sh 'echo "Current directory contents:"'
+                    sh 'ls -la'
+                    sh 'echo "src directory contents:"'
+                    sh 'ls -la src'
+                    sh 'docker build -t flask-app -f src/Dockerfile .'
             }
         }
 
