@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         // JFrog Artifactory details
-        ARTIFACTORY_URL = 'http://your-artifactory-url'
-        ARTIFACTORY_REPO = 'your-repo-name'
-        DOCKER_REGISTRY = 'your-artifactory-docker-repo'
+        ARTIFACTORY_URL = 'http://174.129.103.108:8082/'
+        ARTIFACTORY_REPO = 'flask'
+        DOCKER_REGISTRY = 'http://174.129.103.108:8082/artifactory/flask'
 
         // Docker Hub credentials
         ARTIFACTORY_USER = credentials('artifactory-username')
@@ -16,11 +16,11 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                git url: 'https://github.com/your-repo.git', branch: 'main'
-            }
-        }
+        // stage('Checkout') {
+        //     steps {
+        //         git url: 'https://github.com/your-repo.git', branch: 'main'
+        //     }
+        // }
 
         stage('Build Docker Image') {
             steps {
