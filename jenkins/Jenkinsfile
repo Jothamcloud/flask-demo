@@ -20,10 +20,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'echo "Current directory contents:"'
-                    sh 'ls -la'
-                    sh 'echo "src directory contents:"'
-                    sh 'ls -la src'
                     sh 'docker build -t flask-app -f src/Dockerfile .'
                 }
             }
@@ -33,7 +29,7 @@ pipeline {
             steps {
                 script {
                     
-                    sh 'docker run flask-app pytest tests/'
+                    sh 'docker run --rm flask-app pytest src'
                 }
             }
         }
