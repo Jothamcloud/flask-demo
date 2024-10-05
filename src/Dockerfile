@@ -17,8 +17,10 @@ WORKDIR /app
 
 # Copy only the necessary runtime files from the build stage
 COPY --from=builder /install /usr/local
-COPY . .
+
+# Copy application files
+COPY ./src .
 
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+CMD ["python", "app.py"]v
