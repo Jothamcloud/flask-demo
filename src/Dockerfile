@@ -7,7 +7,7 @@ WORKDIR /app
 RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev
 
 # Install Python dependencies in a separate install directory
-COPY ../requirements.txt .
+COPY /requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # Stage 2: Runtime stage
@@ -19,7 +19,7 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 
 # Copy application files
-COPY . .
+COPY src/ .
 
 EXPOSE 5000
 
