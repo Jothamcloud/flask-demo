@@ -23,8 +23,6 @@ COPY --from=builder /install /usr/local
 # Copy application files
 COPY src/ .
 
-COPY tests/ ./tests/
-
 # Expose the port the app runs on
 EXPOSE 5000
 
