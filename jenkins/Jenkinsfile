@@ -25,6 +25,7 @@ pipeline {
                     sh 'echo "src directory contents:"'
                     sh 'ls -la src'
                     sh 'docker build -t flask-app -f src/Dockerfile .'
+                }
             }
         }
 
