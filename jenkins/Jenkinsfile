@@ -11,7 +11,7 @@ pipeline {
         ARTIFACTORY_USER = credentials('artifactory-username')
         ARTIFACTORY_PASSWORD = credentials('artifactory-password')
 
-        // Python Environment
+      
         PYTHON_VERSION = '3.9'
     }
 
