@@ -31,7 +31,7 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    // Run your Flask tests here (update based on your test setup)
+                    
                     sh 'docker run flask-app pytest tests/'
                 }
             }
