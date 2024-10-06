@@ -73,10 +73,12 @@ pipeline {
 
                         // Use JFrog CLI to push the image
                         sh """
-                            ${JFROG_CLI_PATH} docker push ${IMAGE_NAME}:${BUILD_NUMBER} ${ARTIFACTORY_REPO} \
+                            ${JFROG_CLI_PATH} rt docker-push ${IMAGE_NAME}:${BUILD_NUMBER} ${ARTIFACTORY_REPO} \
+                            --url=${ARTIFACTORY_URL} \
+                            --user=${ARTIFACTORY_USER} \
+                            --password=${ARTIFACTORY_PASS} \
                             --build-name=my-build \
-                            --build-number=${BUILD_NUMBER} \
-                            --url=${ARTIFACTORY_URL}
+                            --build-number=${BUILD_NUMBER}
                         """
 
                         // Use JFrog CLI to collect and publish build info
