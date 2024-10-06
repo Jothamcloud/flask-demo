@@ -7,7 +7,7 @@ pipeline {
         ARTIFACTORY_REPO = 'flask'
         DOCKER_REGISTRY = "${ARTIFACTORY_URL}/${ARTIFACTORY_REPO}"
         
-        // Credentialss
+        // Credentials
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
 
         PYTHON_VERSION = '3.9'
@@ -24,18 +24,18 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t flask-app:${BUILD_NUMBER} -f src/Dockerfile .'
+                    sh "docker build -t ${DOCKER_REGISTRY}/flask-app:${BUILD_NUMBER} -f src/Dockerfile ."
                 }
             }
         }
 
         stage('Trivy Scan') {
             steps {
-                sh '''
+                sh """
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-                export PATH=$PATH:$(pwd)/bin
-                trivy image --exit-code 1 --severity HIGH,CRITICAL flask-app:${BUILD_NUMBER}
-                '''
+                export PATH=\$PATH:\$(pwd)/bin
+                trivy image --exit-code 1 --severity HIGH,CRITICAL ${DOCKER_REGISTRY}/flask-app:${BUILD_NUMBER}
+                """
             }
             post {
                 success {
@@ -56,6 +56,7 @@ pipeline {
                 """
                 withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
                     sh """
+                        ${JFROG_CLI_PATH} config remove artifactory-server || true
                         ${JFROG_CLI_PATH} config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
                     """
                 }
@@ -66,7 +67,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    ${JFROG_CLI_PATH} docker push flask-app:${BUILD_NUMBER} ${DOCKER_REGISTRY} \
+                    ${JFROG_CLI_PATH} docker push ${DOCKER_REGISTRY}/flask-app:${BUILD_NUMBER} \
                     --build-name=my-build \
                     --build-number=${BUILD_NUMBER} \
                     --server-id=artifactory-server
@@ -79,7 +80,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up...'
-            sh 'docker rmi flask-app:${BUILD_NUMBER} || true'
+            sh "docker rmi ${DOCKER_REGISTRY}/flask-app:${BUILD_NUMBER} || true"
             cleanWs()
         }
     }
