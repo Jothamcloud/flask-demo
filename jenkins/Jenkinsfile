@@ -25,7 +25,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -f src/Dockerfile ."
+                    sh "docker build -t flask-app:${BUILD_NUMBER} -f src/Dockerfile ."
                 }
             }
         }
@@ -35,7 +35,7 @@ pipeline {
                 sh """
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
                 export PATH=\$PATH:\$(pwd)/bin
-                trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}:${BUILD_NUMBER}
+                trivy image --exit-code 1 --severity HIGH,CRITICAL flask-app:${BUILD_NUMBER}
                 """
             }
             post {
@@ -95,6 +95,7 @@ pipeline {
         always {
             echo 'Cleaning up...'
             sh "docker rmi ${IMAGE_NAME}:${BUILD_NUMBER} || true"
+            sh "docker rmi flask-app:${BUILD_NUMBER} || true"
             cleanWs()
         }
     }
