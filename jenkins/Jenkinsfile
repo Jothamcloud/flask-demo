@@ -3,13 +3,12 @@ pipeline {
 
     environment {
         // JFrog Artifactory details
-        ARTIFACTORY_URL = 'http://174.129.103.108:8082/'
+        ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'  // Added '/artifactory'
         ARTIFACTORY_REPO = 'flask'
-        DOCKER_REGISTRY = 'http://174.129.103.108:8082/artifactory/flask'
-
-        // Docker Hub credentials
-        ARTIFACTORY_USER = credentials('artifactory-username')
-        ARTIFACTORY_PASSWORD = credentials('artifactory-password')
+        DOCKER_REGISTRY = "${ARTIFACTORY_URL}/${ARTIFACTORY_REPO}"
+        
+        // Credentials
+        ARTIFACTORY_CREDS = credentials('artifactory-credentials')  // Use a single credential
 
         PYTHON_VERSION = '3.9'
     }
@@ -41,22 +40,28 @@ pipeline {
             }
         }
 
-        stage('JFrog CLI Setup') {
+        stage('JFrog CLI Setup and Config') {
             steps {
                 sh '''
-                curl -fL https://getcli.jfrog.io | sh
+                curl -fL https://install-cli.jfrog.io | sh
                 chmod +x jfrog
+                ./jfrog --version
                 '''
+                script {
+                    // Configure JFrog CLI
+                    sh """
+                    ./jfrog config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_CREDS_USR} --password=${ARTIFACTORY_CREDS_PSW} --interactive=false
+                    """
+                }
             }
         }
 
         stage('Push to Artifactory') {
             steps {
                 script {
-                    sh '''
-                    ./jfrog rt config --url ${ARTIFACTORY_URL} --user ${ARTIFACTORY_USER} --password ${ARTIFACTORY_PASSWORD}
-                     ./jfrog rt docker-push flask-app ${DOCKER_REGISTRY} --build-name=my-build --build-number=${BUILD_NUMBER}
-                    '''
+                    sh """
+                    ./jfrog rt docker-push flask-app ${DOCKER_REGISTRY} --build-name=my-build --build-number=${BUILD_NUMBER} --server-id=artifactory-server
+                    """
                 }
             }
         }
