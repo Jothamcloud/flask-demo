@@ -1,28 +1,50 @@
 pipeline {
     agent any
 
+    parameters {
+        string(name: 'BUILD_NUMBER', defaultValue: '', description: 'Build number to deploy')
+    }
+
     environment {
-        ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
+        ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory' 
         ARTIFACTORY_REPO = 'flask'
         DOCKER_REGISTRY = "174.129.103.108:8082"
-        // Use the passed BUILD_NUMBER parameter
-        IMAGE_NAME = "${DOCKER_REGISTRY}/${ARTIFACTORY_REPO}/flask-app:${params.BUILD_NUMBER}"
+        IMAGE_NAME = "${DOCKER_REGISTRY}/${ARTIFACTORY_REPO}/flask-app"
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
-        DEPLOYMENT_USER = 'ubuntu' // Set your deployment username
-        DEPLOYMENT_SERVER = '174.129.103.108' // Set your deployment server address
-        SSH_CREDENTIALS = credentials('your-ssh-credentials-id') // Set your SSH credentials ID
+        JFROG_CLI_VERSION = "2.70.0"
+        JFROG_CLI_PATH = "${WORKSPACE}/jfrog"
     }
 
     stages {
-        stage('Pull from Artifactory') {
+        stage('JFrog CLI Setup and Config') {
             steps {
                 script {
-                    // Use JFrog CLI to pull the Docker image from Artifactory
+                    // Download and set up JFrog CLI
                     sh """
-                        curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/2.70.0/jfrog-cli-linux-amd64/jf" -o ./jfrog
-                        chmod +x ./jfrog
-                        ./jfrog rt docker-pull ${IMAGE_NAME} --url=${ARTIFACTORY_URL} \
-                        --user=${ARTIFACTORY_CREDS.username} --password=${ARTIFACTORY_CREDS.password}
+                        curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/\${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o ${JFROG_CLI_PATH}
+                        chmod +x ${JFROG_CLI_PATH}
+                        ${JFROG_CLI_PATH} --version
+                    """
+                    // Configure JFrog CLI with Artifactory credentials
+                    withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
+                        sh """
+                            ${JFROG_CLI_PATH} config remove artifactory-server || true
+                            ${JFROG_CLI_PATH} config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Pull Docker Image from Artifactory') {
+            steps {
+                script {
+                    // Pull the Docker image using JFrog CLI
+                    sh """
+                        ${JFROG_CLI_PATH} rt docker-pull ${IMAGE_NAME}:${BUILD_NUMBER} ${ARTIFACTORY_REPO} \
+                        --url=${ARTIFACTORY_URL} \
+                        --user=${ARTIFACTORY_USER} \
+                        --password=${ARTIFACTORY_PASS}
                     """
                 }
             }
@@ -30,19 +52,9 @@ pipeline {
 
         stage('Deploy Application') {
             steps {
-                sshagent(['your-ssh-credentials-id']) { // Use your SSH credentials ID
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ${DEPLOYMENT_USER}@${DEPLOYMENT_SERVER} '
-                        # Stop the existing container if it's running
-                        if [ \$(docker ps -q -f name=flask-app) ]; then
-                            docker stop flask-app
-                            docker rm flask-app
-                        fi
-                        
-                        # Run the new container with the pulled image
-                        docker run -d --name flask-app -p 5000:5000 ${IMAGE_NAME}
-                    '
-                    """
+                script {
+                    // Deploying Docker image
+                    sh "docker run -d --rm --name flask-app -p 80:80 ${IMAGE_NAME}:${BUILD_NUMBER}"
                 }
             }
         }
@@ -51,7 +63,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up...'
-            cleanWs() // Clean up the workspace
+            cleanWs()
         }
     }
 }
