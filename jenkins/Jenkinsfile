@@ -49,7 +49,7 @@ pipeline {
         stage('JFrog CLI Setup and Config') {
             steps {
                 sh """
-                    curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2/\${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o jfrog
+                    curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/\${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o jfrog
                     chmod +x jfrog
                     ./jfrog --version
                 """
