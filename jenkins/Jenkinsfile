@@ -5,9 +5,10 @@ pipeline {
         // JFrog Artifactory details
         ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
         ARTIFACTORY_REPO = 'flask'
-        DOCKER_REGISTRY = "${ARTIFACTORY_URL}/${ARTIFACTORY_REPO}"
+        DOCKER_REGISTRY = "174.129.103.108:8082"
+        IMAGE_NAME = "${DOCKER_REGISTRY}/${ARTIFACTORY_REPO}/flask-app"
 
-        // Credentialss
+        // Credentials
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
 
         PYTHON_VERSION = '3.9'
@@ -24,18 +25,18 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t flask-app:${BUILD_NUMBER} -f src/Dockerfile .'
+                    sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -f src/Dockerfile ."
                 }
             }
         }
 
         stage('Trivy Scan') {
             steps {
-                sh '''
+                sh """
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-                export PATH=$PATH:$(pwd)/bin
-                trivy image --exit-code 1 --severity HIGH,CRITICAL flask-app:${BUILD_NUMBER}
-                '''
+                export PATH=\$PATH:\$(pwd)/bin
+                trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME}:${BUILD_NUMBER}
+                """
             }
             post {
                 success {
@@ -63,26 +64,102 @@ pipeline {
             }
         }
 
-
         stage('Push to Artifactory') {
             steps {
                 script {
                     sh """
-                    ${JFROG_CLI_PATH} docker push flask-app:${BUILD_NUMBER} ${DOCKER_REGISTRY} \
+                    ${JFROG_CLI_PATH} docker push ${IMAGE_NAME}:${BUILD_NUMBER} \
                     --build-name=my-build \
                     --build-number=${BUILD_NUMBER} \
                     --server-id=artifactory-server
                     """
-                }
-            }
-        }
-    }
 
-    post {
-        always {
-            echo 'Cleaning up...'
-            sh 'docker rmi flask-app:${BUILD_NUMBER} || true'
-            cleanWs()
-        }
-    }
-}
+
+// pipeline {
+//     agent any
+
+//     environment {
+//         // JFrog Artifactory details
+//         ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
+//         ARTIFACTORY_REPO = 'flask'
+//         DOCKER_REGISTRY = "${ARTIFACTORY_URL}/${ARTIFACTORY_REPO}"
+
+//         // Credentialss
+//         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
+
+//         PYTHON_VERSION = '3.9'
+
+//         // Set PATH to include the current directory
+//         PATH = "${WORKSPACE}:${env.PATH}"
+
+//         // JFrog CLI version and path
+//         JFROG_CLI_VERSION = "2.70.0"
+//         JFROG_CLI_PATH = "${WORKSPACE}/jfrog"
+//     }
+
+//     stages {
+//         stage('Build Docker Image') {
+//             steps {
+//                 script {
+//                     sh 'docker build -t flask-app:${BUILD_NUMBER} -f src/Dockerfile .'
+//                 }
+//             }
+//         }
+
+//         stage('Trivy Scan') {
+//             steps {
+//                 sh '''
+//                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+//                 export PATH=$PATH:$(pwd)/bin
+//                 trivy image --exit-code 1 --severity HIGH,CRITICAL flask-app:${BUILD_NUMBER}
+//                 '''
+//             }
+//             post {
+//                 success {
+//                     echo 'Trivy scan passed - no HIGH or CRITICAL vulnerabilities found'
+//                 }
+//                 failure {
+//                     echo 'Security vulnerabilities found!'
+//                 }
+//             }
+//         }
+
+//         stage('JFrog CLI Setup and Config') {
+//             steps {
+//                 sh """
+//                     curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/\${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o ${JFROG_CLI_PATH}
+//                     chmod +x ${JFROG_CLI_PATH}
+//                     ${JFROG_CLI_PATH} --version
+//                 """
+//                 withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
+//                     sh """
+//                         ${JFROG_CLI_PATH} config remove artifactory-server || true
+//                         ${JFROG_CLI_PATH} config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
+//                     """
+//                 }
+//             }
+//         }
+
+
+//         stage('Push to Artifactory') {
+//             steps {
+//                 script {
+//                     sh """
+//                     ${JFROG_CLI_PATH} docker push flask-app:${BUILD_NUMBER} ${DOCKER_REGISTRY} \
+//                     --build-name=my-build \
+//                     --build-number=${BUILD_NUMBER} \
+//                     --server-id=artifactory-server
+//                     """
+//                 }
+//             }
+//         }
+//     }
+
+//     post {
+//         always {
+//             echo 'Cleaning up...'
+//             sh 'docker rmi flask-app:${BUILD_NUMBER} || true'
+//             cleanWs()
+//         }
+//     }
+// }
