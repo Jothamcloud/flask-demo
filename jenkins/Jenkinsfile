@@ -6,7 +6,7 @@ pipeline {
         ARTIFACTORY_REPO = 'flask'
         DOCKER_REGISTRY = "${ARTIFACTORY_URL}/${ARTIFACTORY_REPO}"
         
-        // Credentials
+        // Credentialss
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
         PYTHON_VERSION = '3.9'
         
