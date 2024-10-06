@@ -11,12 +11,10 @@ pipeline {
         ARTIFACTORY_USER = credentials('artifactory-username')
         ARTIFACTORY_PASSWORD = credentials('artifactory-password')
 
-      
         PYTHON_VERSION = '3.9'
     }
 
     stages {
-        
         stage('Build Docker Image') {
             steps {
                 script {
@@ -36,7 +34,7 @@ pipeline {
             post {
                 success {
                     echo 'Trivy scan passed - no HIGH or CRITICAL vulnerabilities found'
-            post {
+                }
                 failure {
                     echo 'Security vulnerabilities found!'
                 }
