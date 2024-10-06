@@ -17,13 +17,17 @@ pipeline {
 
         // JFrog CLI version
         JFROG_CLI_VERSION = "2.70.0"
+
+        // Docker image name and tag
+        DOCKER_IMAGE_NAME = "flask-app"
+        DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t flask-app -f src/Dockerfile .'
+                    sh "docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} -f src/Dockerfile ."
                 }
             }
         }
@@ -33,7 +37,7 @@ pipeline {
                 sh '''
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
                 export PATH=$PATH:$(pwd)/bin
-                trivy image --exit-code 1 --severity HIGH,CRITICAL flask-app
+                trivy image --exit-code 1 --severity HIGH,CRITICAL ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                 '''
             }
             post {
@@ -64,7 +68,12 @@ pipeline {
         stage('Push to Artifactory') {
             steps {
                 script {
-                    sh "./jfrog rt docker-push flask-app ${DOCKER_REGISTRY} --build-name=my-build --build-number=${BUILD_NUMBER} --server-id=artifactory-server"
+                    sh """
+                    ./jfrog docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} \
+                    --build-name=my-build \
+                    --build-number=${BUILD_NUMBER} \
+                    --server-id=artifactory-server
+                    """
                 }
             }
         }
@@ -73,7 +82,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up...'
-            sh 'docker rmi flask-app || true'
+            sh "docker rmi ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true"
             cleanWs()
         }
     }
