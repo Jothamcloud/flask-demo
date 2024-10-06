@@ -45,15 +45,13 @@ pipeline {
 
         stage('JFrog CLI Setup and Config') {
             steps {
-                sh '''
-                curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/[RELEASE]/jfrog-cli-linux-amd64/jf" -o jfrog
-                chmod +x jfrog
-                ./jfrog --version
-                '''
                 script {
-                    // Configure JFrog CLI
+                    def jfrogCliVersion = "2.70.0"  // Specify the version you want to use
                     sh """
-                    ./jfrog config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_CREDS_USR} --password=${ARTIFACTORY_CREDS_PSW} --interactive=false
+                        curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2/${jfrogCliVersion}/jfrog-cli-linux-amd64/jf" -o jfrog
+                        chmod +x jfrog
+                        ./jfrog --version
+                        ./jfrog config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_CREDS_USR} --password=${ARTIFACTORY_CREDS_PSW} --interactive=false
                     """
                 }
             }
@@ -62,9 +60,7 @@ pipeline {
         stage('Push to Artifactory') {
             steps {
                 script {
-                    sh """
-                    ./jfrog rt docker-push flask-app ${DOCKER_REGISTRY} --build-name=my-build --build-number=${BUILD_NUMBER} --server-id=artifactory-server
-                    """
+                    sh "./jfrog rt docker-push flask-app ${DOCKER_REGISTRY} --build-name=my-build --build-number=${BUILD_NUMBER} --server-id=artifactory-server"
                 }
             }
         }
