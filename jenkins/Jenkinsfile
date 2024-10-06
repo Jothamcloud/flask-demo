@@ -1,39 +1,40 @@
 pipeline {
     agent any
+
     environment {
         // JFrog Artifactory details
         ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
         ARTIFACTORY_REPO = 'flask'
         DOCKER_REGISTRY = "${ARTIFACTORY_URL}/${ARTIFACTORY_REPO}"
         
-        // Credentialss
+        // Credentials
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
+
         PYTHON_VERSION = '3.9'
         
         // Set PATH to include the current directory
         PATH = "${WORKSPACE}:${env.PATH}"
+
         // JFrog CLI version
         JFROG_CLI_VERSION = "2.70.0"
-        
-        // Docker image name and tag
-        DOCKER_IMAGE_NAME = "flask-app"
-        DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
     }
+
     stages {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} -f src/Dockerfile ."
+                    sh 'docker build -t flask-app -f src/Dockerfile .'
                 }
             }
         }
+
         stage('Trivy Scan') {
             steps {
-                sh """
+                sh '''
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-                export PATH=\$PATH:\$(pwd)/bin
-                trivy image --exit-code 1 --severity HIGH,CRITICAL ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-                """
+                export PATH=$PATH:$(pwd)/bin
+                trivy image --exit-code 1 --severity HIGH,CRITICAL flask-app
+                '''
             }
             post {
                 success {
@@ -44,6 +45,7 @@ pipeline {
                 }
             }
         }
+
         stage('JFrog CLI Setup and Config') {
             steps {
                 sh """
@@ -58,23 +60,20 @@ pipeline {
                 }
             }
         }
+
         stage('Push to Artifactory') {
             steps {
                 script {
-                    sh """
-                    ./jfrog docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} \
-                    --build-name=my-build \
-                    --build-number=${BUILD_NUMBER} \
-                    --server-id=artifactory-server
-                    """
+                    sh "./jfrog rt docker-push flask-app ${DOCKER_REGISTRY} --build-name=my-build --build-number=${BUILD_NUMBER} --server-id=artifactory-server"
                 }
             }
         }
     }
+
     post {
         always {
             echo 'Cleaning up...'
-            sh "docker rmi ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true"
+            sh 'docker rmi flask-app || true'
             cleanWs()
         }
     }
