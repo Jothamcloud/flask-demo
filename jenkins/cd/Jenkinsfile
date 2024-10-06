@@ -2,15 +2,17 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'BUILD_NUMBER', defaultValue: '', description: 'Build number to deploy')
+        string(name: 'BUILD_NUMBER', defaultValue: '', description: 'The build number from the CI pipeline')
     }
 
     environment {
-        ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory' 
+        ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
         ARTIFACTORY_REPO = 'flask'
         DOCKER_REGISTRY = "174.129.103.108:8082"
         IMAGE_NAME = "${DOCKER_REGISTRY}/${ARTIFACTORY_REPO}/flask-app"
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
+        PYTHON_VERSION = '3.9'
+        PATH = "${WORKSPACE}:${env.PATH}"
         JFROG_CLI_VERSION = "2.70.0"
         JFROG_CLI_PATH = "${WORKSPACE}/jfrog"
     }
@@ -18,44 +20,38 @@ pipeline {
     stages {
         stage('JFrog CLI Setup and Config') {
             steps {
-                script {
-                    // Download and set up JFrog CLI
+                sh """
+                    curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o ${JFROG_CLI_PATH}
+                    chmod +x ${JFROG_CLI_PATH}
+                    ${JFROG_CLI_PATH} --version
+                """
+                withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
                     sh """
-                        curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/\${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o ${JFROG_CLI_PATH}
-                        chmod +x ${JFROG_CLI_PATH}
-                        ${JFROG_CLI_PATH} --version
+                        ${JFROG_CLI_PATH} config remove artifactory-server || true
+                        ${JFROG_CLI_PATH} config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
                     """
-                    // Configure JFrog CLI with Artifactory credentials
-                    withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
-                        sh """
-                            ${JFROG_CLI_PATH} config remove artifactory-server || true
-                            ${JFROG_CLI_PATH} config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
-                        """
-                    }
                 }
             }
         }
 
         stage('Pull Docker Image from Artifactory') {
             steps {
-                script {
-                    // Pull the Docker image using JFrog CLI
-                    sh """
-                        ${JFROG_CLI_PATH} rt docker-pull ${IMAGE_NAME}:${BUILD_NUMBER} ${ARTIFACTORY_REPO} \
-                        --url=${ARTIFACTORY_URL} \
-                        --user=${ARTIFACTORY_USER} \
-                        --password=${ARTIFACTORY_PASS}
-                    """
+                withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
+                    script {
+                        // Pull the Docker image from Artifactory using the passed BUILD_NUMBER
+                        sh "docker pull ${IMAGE_NAME}:${BUILD_NUMBER}"
+                    }
                 }
             }
         }
 
         stage('Deploy Application') {
             steps {
-                script {
-                    // Deploying Docker image
-                    sh "docker run -d --rm --name flask-app -p 80:80 ${IMAGE_NAME}:${BUILD_NUMBER}"
-                }
+                // Your deployment steps go here
+                sh """
+                echo "Deploying application..."
+                # Add your deployment commands here
+                """
             }
         }
     }
