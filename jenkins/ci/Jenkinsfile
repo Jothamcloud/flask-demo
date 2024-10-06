@@ -85,6 +85,13 @@ pipeline {
     }
 
     post {
+        success {
+            // Trigger the deployment pipeline
+            build job: 'flask-deploy', // Replace with your deployment job name
+                  parameters: [
+                      string(name: 'BUILD_NUMBER', value: "${BUILD_NUMBER}")
+                  ]
+        }
         always {
             echo 'Cleaning up...'
             sh "docker rmi ${IMAGE_NAME}:${BUILD_NUMBER} || true"
@@ -93,4 +100,3 @@ pipeline {
         }
     }
 }
-

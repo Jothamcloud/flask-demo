@@ -1,0 +1,57 @@
+pipeline {
+    agent any
+
+    environment {
+        ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
+        ARTIFACTORY_REPO = 'flask'
+        DOCKER_REGISTRY = "174.129.103.108:8082"
+        // Use the passed BUILD_NUMBER parameter
+        IMAGE_NAME = "${DOCKER_REGISTRY}/${ARTIFACTORY_REPO}/flask-app:${params.BUILD_NUMBER}"
+        ARTIFACTORY_CREDS = credentials('artifactory-credentials')
+        DEPLOYMENT_USER = 'ubuntu' // Set your deployment username
+        DEPLOYMENT_SERVER = '174.129.103.108' // Set your deployment server address
+        SSH_CREDENTIALS = credentials('your-ssh-credentials-id') // Set your SSH credentials ID
+    }
+
+    stages {
+        stage('Pull from Artifactory') {
+            steps {
+                script {
+                    // Use JFrog CLI to pull the Docker image from Artifactory
+                    sh """
+                        curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/2.70.0/jfrog-cli-linux-amd64/jf" -o ./jfrog
+                        chmod +x ./jfrog
+                        ./jfrog rt docker-pull ${IMAGE_NAME} --url=${ARTIFACTORY_URL} \
+                        --user=${ARTIFACTORY_CREDS.username} --password=${ARTIFACTORY_CREDS.password}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                sshagent(['your-ssh-credentials-id']) { // Use your SSH credentials ID
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ${DEPLOYMENT_USER}@${DEPLOYMENT_SERVER} '
+                        # Stop the existing container if it's running
+                        if [ \$(docker ps -q -f name=flask-app) ]; then
+                            docker stop flask-app
+                            docker rm flask-app
+                        fi
+                        
+                        # Run the new container with the pulled image
+                        docker run -d --name flask-app -p 5000:5000 ${IMAGE_NAME}
+                    '
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+            cleanWs() // Clean up the workspace
+        }
+    }
+}
