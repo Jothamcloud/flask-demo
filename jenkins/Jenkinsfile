@@ -2,28 +2,26 @@ pipeline {
     agent any
 
     environment {
+        // JFrog Artifactory details
         ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
         ARTIFACTORY_REPO = 'flask'
         DOCKER_REGISTRY = "174.129.103.108:8082"
         IMAGE_NAME = "${DOCKER_REGISTRY}/${ARTIFACTORY_REPO}/flask-app"
-        
+
+        // Credentials
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
+
         PYTHON_VERSION = '3.9'
+
+        // Set PATH to include the current directory
         PATH = "${WORKSPACE}:${env.PATH}"
+
+        // JFrog CLI version and path
         JFROG_CLI_VERSION = "2.70.0"
         JFROG_CLI_PATH = "${WORKSPACE}/jfrog"
     }
 
     stages {
-        stage('Configure Docker') {
-            steps {
-                sh '''
-                echo '{ "insecure-registries" : ["174.129.103.108:8082"] }' | sudo tee /etc/docker/daemon.json
-                sudo systemctl restart docker
-                '''
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 script {
