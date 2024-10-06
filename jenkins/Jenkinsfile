@@ -66,24 +66,23 @@ pipeline {
 
         stage('Push to Artifactory') {
             steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
+                    script {
+                        // Tag the image with the Artifactory repository
+                        sh "docker tag flask-app:${BUILD_NUMBER} ${IMAGE_NAME}:${BUILD_NUMBER}"
+
+                        // Use JFrog CLI to push the image
                         sh """
-                        # Tag the image with the Artifactory repository
-                        docker tag flask-app:${BUILD_NUMBER} ${IMAGE_NAME}:${BUILD_NUMBER}
+                            ${JFROG_CLI_PATH} docker push ${IMAGE_NAME}:${BUILD_NUMBER} ${ARTIFACTORY_REPO} \
+                            --build-name=my-build \
+                            --build-number=${BUILD_NUMBER} \
+                            --url=${ARTIFACTORY_URL}
+                        """
 
-                        # Login to Artifactory
-                        echo ${ARTIFACTORY_PASS} | docker login ${DOCKER_REGISTRY} -u ${ARTIFACTORY_USER} --password-stdin
-
-                        # Push the image
-                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-
-                        # Logout from Artifactory
-                        docker logout ${DOCKER_REGISTRY}
-
-                        # Use JFrog CLI to collect build info
-                        ${JFROG_CLI_PATH} rt build-add-git my-build ${BUILD_NUMBER}
-                        ${JFROG_CLI_PATH} rt build-publish my-build ${BUILD_NUMBER}
+                        // Use JFrog CLI to collect and publish build info
+                        sh """
+                            ${JFROG_CLI_PATH} rt build-add-git my-build ${BUILD_NUMBER}
+                            ${JFROG_CLI_PATH} rt build-publish my-build ${BUILD_NUMBER}
                         """
                     }
                 }
