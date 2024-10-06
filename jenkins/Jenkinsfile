@@ -1,6 +1,5 @@
 pipeline {
     agent any
-
     environment {
         // JFrog Artifactory details
         ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
@@ -9,20 +8,17 @@ pipeline {
         
         // Credentials
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
-
         PYTHON_VERSION = '3.9'
         
         // Set PATH to include the current directory
         PATH = "${WORKSPACE}:${env.PATH}"
-
         // JFrog CLI version
         JFROG_CLI_VERSION = "2.70.0"
-
+        
         // Docker image name and tag
         DOCKER_IMAGE_NAME = "flask-app"
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
     }
-
     stages {
         stage('Build Docker Image') {
             steps {
@@ -31,14 +27,13 @@ pipeline {
                 }
             }
         }
-
         stage('Trivy Scan') {
             steps {
-                sh '''
+                sh """
                 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-                export PATH=$PATH:$(pwd)/bin
+                export PATH=\$PATH:\$(pwd)/bin
                 trivy image --exit-code 1 --severity HIGH,CRITICAL ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-                '''
+                """
             }
             post {
                 success {
@@ -49,7 +44,6 @@ pipeline {
                 }
             }
         }
-
         stage('JFrog CLI Setup and Config') {
             steps {
                 sh """
@@ -57,33 +51,4 @@ pipeline {
                     chmod +x jfrog
                     ./jfrog --version
                 """
-                withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
-                    sh '''
-                        ./jfrog config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
-                    '''
-                }
-            }
-        }
-
-        stage('Push to Artifactory') {
-            steps {
-                script {
-                    sh """
-                    ./jfrog docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} \
-                    --build-name=my-build \
-                    --build-number=${BUILD_NUMBER} \
-                    --server-id=artifactory-server
-                    """
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo 'Cleaning up...'
-            sh "docker rmi ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} || true"
-            cleanWs()
-        }
-    }
-}
+                withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS
