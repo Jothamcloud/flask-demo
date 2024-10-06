@@ -2,21 +2,13 @@ pipeline {
     agent any
 
     environment {
-        // JFrog Artifactory details
-        ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory'
+        ARTIFACTORY_URL = 'http://174.129.103.108:8082/artifactory' // Using HTTP
         ARTIFACTORY_REPO = 'flask'
         DOCKER_REGISTRY = "174.129.103.108:8082"
         IMAGE_NAME = "${DOCKER_REGISTRY}/${ARTIFACTORY_REPO}/flask-app"
-
-        // Credentials
         ARTIFACTORY_CREDS = credentials('artifactory-credentials')
-
         PYTHON_VERSION = '3.9'
-
-        // Set PATH to include the current directory
         PATH = "${WORKSPACE}:${env.PATH}"
-
-        // JFrog CLI version and path
         JFROG_CLI_VERSION = "2.70.0"
         JFROG_CLI_PATH = "${WORKSPACE}/jfrog"
     }
@@ -71,7 +63,7 @@ pipeline {
                         // Tag the image with the Artifactory repository
                         sh "docker tag flask-app:${BUILD_NUMBER} ${IMAGE_NAME}:${BUILD_NUMBER}"
 
-                        // Use JFrog CLI to push the image
+                        // Push the Docker image to Artifactory
                         sh """
                             ${JFROG_CLI_PATH} rt docker-push ${IMAGE_NAME}:${BUILD_NUMBER} ${ARTIFACTORY_REPO} \
                             --url=${ARTIFACTORY_URL} \
@@ -81,7 +73,7 @@ pipeline {
                             --build-number=${BUILD_NUMBER}
                         """
 
-                        // Use JFrog CLI to collect and publish build info
+                        // Collect and publish build info
                         sh """
                             ${JFROG_CLI_PATH} rt build-add-git my-build ${BUILD_NUMBER}
                             ${JFROG_CLI_PATH} rt build-publish my-build ${BUILD_NUMBER}
@@ -101,6 +93,7 @@ pipeline {
         }
     }
 }
+
 
 // pipeline {
 //     agent any
