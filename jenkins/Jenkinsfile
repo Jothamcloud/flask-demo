@@ -73,7 +73,19 @@ pipeline {
                     --build-number=${BUILD_NUMBER} \
                     --server-id=artifactory-server
                     """
+                }
+            }
+        }
+    }
 
+    post {
+        always {
+            echo 'Cleaning up...'
+            sh "docker rmi ${IMAGE_NAME}:${BUILD_NUMBER} || true"
+            cleanWs()
+        }
+    }
+}
 
 // pipeline {
 //     agent any
