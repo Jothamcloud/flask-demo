@@ -14,6 +14,9 @@ pipeline {
         
         // Set PATH to include the current directory
         PATH = "${WORKSPACE}:${env.PATH}"
+
+        // JFrog CLI version
+        JFROG_CLI_VERSION = "2.70.0"
     }
 
     stages {
@@ -45,14 +48,15 @@ pipeline {
 
         stage('JFrog CLI Setup and Config') {
             steps {
-                script {
-                    def jfrogCliVersion = "2.70.0"  // Specify the version you want to use
-                    sh """
-                        curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2/${jfrogCliVersion}/jfrog-cli-linux-amd64/jf" -o jfrog
-                        chmod +x jfrog
-                        ./jfrog --version
-                        ./jfrog config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_CREDS_USR} --password=${ARTIFACTORY_CREDS_PSW} --interactive=false
-                    """
+                sh """
+                    curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2/\${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o jfrog
+                    chmod +x jfrog
+                    ./jfrog --version
+                """
+                withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
+                    sh '''
+                        ./jfrog config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
+                    '''
                 }
             }
         }
