@@ -46,9 +46,9 @@ pipeline {
         stage('JFrog CLI Setup and Config') {
             steps {
                 sh '''
-                curl -fL https://install-cli.jfrog.io | sh
-                mv jf jfrog
-                chmod +x jfrog
+                curl -fL https://install-cli.jfrog.io | sh -s -- -npmVerbose -ci
+                mv ./jf ./jfrog
+                chmod +x ./jfrog
                 ./jfrog --version
                 '''
                 script {
@@ -74,6 +74,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up...'
+            sh 'docker rmi flask-app || true'
             cleanWs()
         }
     }
