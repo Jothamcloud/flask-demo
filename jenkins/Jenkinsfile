@@ -46,20 +46,20 @@ pipeline {
             }
         }
 
-        stage('JFrog CLI Setup and Config') {
-            steps {
-                sh """
-                    curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/\${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o jfrog
-                    chmod +x jfrog
-                    ./jfrog --version
-                """
-                withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
-                    sh '''
-                        ./jfrog config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
-                    '''
-                }
-            }
-        }
+        // stage('JFrog CLI Setup and Config') {
+        //     steps {
+        //         sh """
+        //             curl -fL "https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/\${JFROG_CLI_VERSION}/jfrog-cli-linux-amd64/jf" -o jfrog
+        //             chmod +x jfrog
+        //             ./jfrog --version
+        //         """
+        //         withCredentials([usernamePassword(credentialsId: 'artifactory-credentials', usernameVariable: 'ARTIFACTORY_USER', passwordVariable: 'ARTIFACTORY_PASS')]) {
+        //             sh '''
+        //                 ./jfrog config add artifactory-server --artifactory-url=${ARTIFACTORY_URL} --user=${ARTIFACTORY_USER} --password=${ARTIFACTORY_PASS} --interactive=false
+        //             '''
+        //         }
+        //     }
+        // }
 
         stage('Push to Artifactory') {
             steps {
