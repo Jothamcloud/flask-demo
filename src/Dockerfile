@@ -6,6 +6,9 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache gcc musl-dev libffi-dev openssl-dev
 
+# Upgrade pip and setuptools
+RUN pip install --no-cache-dir --upgrade pip setuptools
+
 # Copy requirements file from src directory
 COPY src/requirements.txt .
 
@@ -17,7 +20,10 @@ FROM python:3.10-alpine
 
 WORKDIR /app
 
-# Copy only the necessary runtime files from the build stage
+# Upgrade pip and setuptools in the final image as well
+RUN pip install --no-cache-dir --upgrade pip setuptools
+
+# Copy only the necessary runtime files from the builder stage
 COPY --from=builder /install /usr/local
 
 # Copy application files
