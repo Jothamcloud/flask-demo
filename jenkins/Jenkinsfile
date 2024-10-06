@@ -54,7 +54,8 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    ./jfrog rt docker-push flask-app $DOCKER_REGISTRY --build-name=my-build --build-number=$BUILD_NUMBER
+                    ./jfrog rt config --url ${ARTIFACTORY_URL} --user ${ARTIFACTORY_USER} --password ${ARTIFACTORY_PASSWORD}
+                     ./jfrog rt docker-push flask-app ${DOCKER_REGISTRY} --build-name=my-build --build-number=${BUILD_NUMBER}
                     '''
                 }
             }
